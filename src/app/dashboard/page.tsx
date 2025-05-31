@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useFetchUsers } from '@/hooks/useFetchUsers';
+import { User } from '@/types/user';
 import UserCard from '@/components/Dashboard/UserCard';
 import SearchBar from '@/components/Dashboard/SearchBar';
 import Loader from '@/components/common/Loader';
@@ -11,17 +12,28 @@ import Loader from '@/components/common/Loader';
 export default function Dashboard() {
   const { users, loading, error, refetch } = useFetchUsers();
   const [searchQuery, setSearchQuery] = useState('');
+  const [localUsers, setLocalUsers] = useState<User[]>([]);
+
+  // Update local users when API users change
+  useEffect(() => {
+    setLocalUsers(users);
+  }, [users]);
+
+  // Handle user deletion
+  const handleDeleteUser = (userId: number) => {
+    setLocalUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+  };
 
   // Filter users based on search query
   const filteredUsers = useMemo(() => {
-    if (!searchQuery.trim()) return users;
-    
+    if (!searchQuery.trim()) return localUsers;
+
     const query = searchQuery.toLowerCase();
-    return users.filter(user => 
+    return localUsers.filter(user =>
       user.name.toLowerCase().includes(query) ||
       user.address.city.toLowerCase().includes(query)
     );
-  }, [users, searchQuery]);
+  }, [localUsers, searchQuery]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -103,7 +115,7 @@ export default function Dashboard() {
         
         <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
           <span>
-            Showing {filteredUsers.length} of {users.length} users
+            Showing {filteredUsers.length} of {localUsers.length} users
           </span>
           {searchQuery && (
             <motion.span
@@ -158,7 +170,7 @@ export default function Dashboard() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {filteredUsers.map((user, index) => (
-              <UserCard key={user.id} user={user} index={index} />
+              <UserCard key={user.id} user={user} index={index} onDelete={handleDeleteUser} />
             ))}
           </motion.div>
         )}
